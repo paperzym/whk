@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>whk班主任模拟器</title>
+    <style>
+        :root {
+            --cq-red: #e63946;
+            --primary: #1e293b; --secondary: #334155; --accent: #3b82f6;
+            --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --bg: #f1f5f9;
+            --card: #ffffff; --text: #334155; --border: #cbd5e1;
+        }
+        * { box-sizing: border-box; font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; transition: 0.2s;
+        }
+        body { background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column;
+        height: 100vh; overflow: hidden; }
+
+        button { cursor: pointer; border: none; outline: none;
+        border-radius: 6px; font-weight: bold; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1);
+        }
+        .hidden { display: none !important;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px);
+        } to { opacity: 1; transform: translateY(0); } }
+
+        /* 模态框 */
+        .overlay { position: fixed;
+        inset: 0; background: rgba(15, 23, 42, 0.9); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; backdrop-filter: blur(8px);
+        }
+        .modal-box { background: var(--card); border-radius: 16px; padding: 30px; width: 90%; max-width: 650px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.4); max-height: 90vh; overflow-y: auto; }
+        .modal-title { font-size: 1.8em;
+        color: var(--primary); margin-top: 0; border-bottom: 2px solid var(--accent); padding-bottom: 10px;
+        }
+
+        /* 顶部导航 */
+        header { height: 70px;
+        background: var(--card); border-bottom: 4px solid var(--cq-red); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        z-index: 10; }
+        .stat-group { display: flex; gap: 15px;
+        }
+        .stat-pill { background: #f8fafc; padding: 8px 15px; border-radius: 8px;
+        border: 1px solid var(--border); font-weight: bold; display: flex; align-items: center; gap: 6px;
+        }
+        .stat-pill b { color: var(--accent); font-size: 1.1em;
+        }
+
+        /* 主体布局 */
+        .app-body { display: grid;
+        grid-template-columns: 340px 1fr 320px; gap: 20px; padding: 20px; flex: 1; overflow: hidden;
+        }
+
+        /* 左侧面板：决策 */
+        .sidebar { background: var(--card);
+        border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid var(--border);
+        }
+        .nav-tabs { display: flex; background: var(--primary);
+        }
+        .tab-btn { flex: 1; padding: 12px; background: transparent; color: rgba(255,255,255,0.7); font-weight: bold;
+        }
+        .tab-btn.active { background: var(--card); color: var(--primary);
+        }
+        .panel-content { flex: 1; overflow-y: auto; padding: 15px; display: none;
+        }
+        .panel-content.active { display: block; animation: fadeIn 0.3s;
+        }
+
+        .btn-action { width: 100%; text-align: left; padding: 12px; border: 1px solid var(--border);
+        border-radius: 8px; background: white; margin-bottom: 10px; position: relative; }
+        .btn-action:hover:not(:disabled) { border-color: var(--accent);
+        transform: translateY(-2px); box-shadow: 0 4px 8px rgba(59, 130, 246, 0.15);
+        }
+        .cost-tag { position: absolute; right: 10px; top: 12px; font-size: 0.75em; color: #d97706;
+        background: #fef3c7; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .btn-action h5 { margin: 0;
+        color: var(--primary); font-size: 1.05em; display: flex; align-items: center; gap: 5px;
+        }
+        .btn-action p { margin: 5px 0 0 0; font-size: 0.8em; color: #64748b;
+        line-height: 1.4; }
+        
+        .sub-menu { display: none;
+        grid-template-columns: 1fr 1fr; gap: 8px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px dashed var(--border); margin-bottom: 10px;
+        }
+        .sub-menu.active { display: grid;
+        }
+        .btn-mini { padding: 10px; font-size: 0.85em; border: 1px solid var(--border); border-radius: 6px;
+        background: white; font-weight: bold; }
+        .btn-mini:hover { background: var(--accent); color: white; border-color: var(--accent);
+        }
+
+        /* 中间视图：学生与档案 */
+        .main-view { background: var(--card);
+        border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 20px; overflow-y: auto; border: 1px solid var(--border);
+        }
+        .stu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px;
+        }
+        .stu-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; position: relative;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02); border-top: 4px solid var(--primary); }
+        .stu-card.sick { border-top-color: var(--warning);
+        background: #fffbeb; }
+        
+        .stu-header { display: flex;
+        justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 8px;
+        }
+        .stu-name { font-size: 1.25em; font-weight: 900; color: var(--primary);
+        }
+        
+        .tag-pool { display: flex;
+        flex-wrap: wrap; gap: 4px; margin-bottom: 12px; min-height: 24px; }
+        .tag { font-size: 0.7em;
+        padding: 3px 8px; border-radius: 6px; font-weight: bold; }
+        .tag-pos { background: #dcfce7;
+        color: #15803d; border: 1px solid #bbf7d0; }
+        .tag-neg { background: #fee2e2; color: #b91c1c;
+        border: 1px solid #fecaca; }
+
+        .sub-grid { display: grid; grid-template-columns: repeat(3, 1fr);
+        gap: 6px; }
+        .sub-box { background: #f8fafc; padding: 6px; border-radius: 8px; text-align: center;
+        border: 1px solid #e2e8f0; }
+        .sub-label { font-size: 0.65em; color: #64748b; display: block;
+        margin-bottom: 2px; }
+        .sub-val { font-size: 1.1em; font-weight: 900; padding: 2px 0;
+        border-radius: 4px; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        .sub-val.dark-text { color: #1e293b;
+        text-shadow: none; }
+        
+        .stress-bar { height: 8px;
+        background: #e2e8f0; border-radius: 4px; margin-top: 12px; overflow: hidden; }
+        .stress-fill { height: 100%;
+        transition: width 0.3s; }
+
+        /* 右侧情报与日志面板 */
+        .right-panel { display: flex;
+        flex-direction: column; gap: 15px; }
+        .weather-panel { background: var(--card); border-radius: 12px; padding: 20px;
+        text-align: center; border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        position: relative;}
+        .month-tag { position: absolute; top: 10px; right: 10px; background: var(--danger);
+        color: white; padding: 3px 8px; font-size: 0.75em; border-radius: 4px; font-weight: bold;
+        }
+        .log-panel { flex: 1; background: #1e293b; color: #f8fafc; border-radius: 12px; padding: 15px;
+        overflow-y: auto; font-size: 0.85em; border-top: 5px solid var(--accent); box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .log-entry { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed rgba(255,255,255,0.2); line-height: 1.5;
+        }
+        .log-eff { color: #fcd34d; font-weight: bold; margin-left: 5px;
+        }
+
+        /* 档案 柱状图 */
+        .arc-tab { padding: 8px 16px;
+        background: #e2e8f0; border-radius: 20px; cursor: pointer; display: inline-block; margin: 0 5px 10px 0; font-weight: bold;
+        }
+        .arc-tab.active { background: var(--accent); color: white;
+        }
+        .chart-container { width: 100%; height: 200px; border: 1px dashed var(--border); border-radius: 8px;
+        margin-top: 10px; padding: 15px 10px 10px 10px; background: #fafafa; position: relative; display: flex; align-items: flex-end;
+        }
+
+        /* 考试表格 */
+        .exam-table { width: 100%;
+        border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
+        .exam-table th, .exam-table td { padding: 12px 8px;
+        text-align: center; border: 1px solid var(--border); }
+        .exam-table th { background: var(--primary);
+        color: white; }
+        .exam-table tr:nth-child(even) { background: #f8fafc;
+        }
+        .exam-cell { transform: scale(0); opacity: 0; font-weight: bold;
+        }
+        .exam-cell.pop { animation: popIn 0.4s forwards;
+        }
+        .event-col { text-align: left !important; font-size: 0.8em; color: var(--danger); line-height: 1.4;
+        }
+        @keyframes popIn { to { transform: scale(1); opacity: 1;
+        } }
+
+        /* 选择题网格 */
+        .choice-grid { display: grid;
+        grid-template-columns: 1fr; gap: 10px; margin-top: 20px; }
+        .btn-choice { padding: 15px; background: var(--bg);
+        border: 2px solid var(--accent); color: var(--primary); text-align: left; border-radius: 8px; font-size: 1em;
+        }
+        .btn-choice:hover { background: var(--accent); color: white;
+        }
+        
+        .cengfan-grid { display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 15px; }
+        .cengfan-card { background: #f8fafc;
+        border: 1px solid #cbd5e1; padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 10px;
+        }
+        
+        .name-input { padding: 10px;
+        border: 1px solid var(--border); border-radius: 6px; width: 100%; font-size: 0.95em; outline: none;
+        text-align: center;}
+        .name-input:focus { border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+    </style>
+</head>
+<body>
+
+<div id="start-screen" class="overlay">
+    <div class="modal-box" style="max-width: 700px; border-top: 6px solid var(--accent);">
+        <h1 style="color:var(--primary); font-size: 2.5em; margin-bottom: 15px; text-align: center;">whk班主任模拟器</h1>
+        <div style="background:#f8fafc; padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:20px; color:#475569; line-height:1.6;">
+            <b>背景档案：</b><br>
+            你接手了一群刚刚结束信息学奥赛（OI）的退役生。他们虽思维敏捷，但文化课（whk）基础薄弱。距离2026年6月的高考只有不到10个月的时间。<br>
+            请合理安排他们的学习、测试与身心健康。
+        </div>
+
+        <div style="margin-bottom: 20px; padding: 15px; border: 1px dashed var(--border); border-radius: 8px; background: white;">
+            <h3 style="text-align: center; margin-top: 0; margin-bottom: 10px; color: var(--primary);">为你的6名神仙命名（留空则默认）：</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                <input type="text" id="name-0" placeholder="Double10" class="name-input">
+                <input type="text" id="name-1" placeholder="_Sparktasia_" class="name-input">
+                <input type="text" id="name-2" placeholder="paper_" class="name-input">
+                <input type="text" id="name-3" placeholder="GoldSpade" class="name-input">
+                <input type="text" id="name-4" placeholder="xxxxxzy" class="name-input">
+                <input type="text" id="name-5" placeholder="_Communist" class="name-input">
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <button class="btn-action" style="margin:0; border-color:var(--success);" onclick="Game.start('easy')">
+                <h5 style="color:var(--success); font-size:1.2em;">稳健带班</h5>
+                <p>初始资金 ¥10000。提分效率正常。</p>
+            </button>
+            <button class="btn-action" style="margin:0; border-color:var(--danger);" onclick="Game.start('hard')">
+                <h5 style="color:var(--danger); font-size:1.2em;">地狱开局</h5>
+                <p>初始资金 ¥2000。所有学科学习能力下降 20%。</p>
+            </button>
+        </div>
+    </div>
+</div>
+
+<header class="hidden" id="main-header">
+    <div style="font-size: 1.5em; font-weight: 900; color: var(--primary);">高三(OI退役)班</div>
+    <div class="stat-group">
+        <div class="stat-pill">🗓️ <span id="ui-time">2025年 9月 (秋) W1</span></div>
+        <div class="stat-pill">💰 班费: <b id="ui-money">5000</b></div>
+        <div class="stat-pill">⚡ AP: <b id="ui-ap">3</b><span id="ap-max-txt" style="font-size:0.7em; color:#94a3b8">/3</span></div>
+        <button style="background:var(--danger); color:white; padding:10px 25px; border-radius:25px;" onclick="Game.nextTurn()" id="btn-next-turn">结束本周</button>
+    </div>
+</header>
+
+<div class="app-body hidden" id="main-body">
+    <aside class="sidebar">
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="UI.switchTab('action')">🎯 决策</button>
+            <button class="tab-btn" onclick="UI.switchTab('fac')">🏗️ 设施</button>
+        </div>
+        
+        <div id="panel-action" class="panel-content active">
+            <h4 style="margin:0 0 10px 0; color:#64748b; font-size:0.9em;">📖 学习提分</h4>
+            
+            <button class="btn-action" onclick="UI.toggleMenu('menu-study')">
+                <h5>自习针对复习</h5>
+                <p>选择单科进行强化，稳步提升，增加少量压力</p>
+                <span class="cost-tag">AP: 1</span>
+            </button>
+            <div class="sub-menu" id="menu-study">
+                <button class="btn-mini" onclick="Game.doAction('study', 'chi')">语文</button>
+                <button class="btn-mini" onclick="Game.doAction('study', 'mat')">数学</button>
+                <button class="btn-mini" onclick="Game.doAction('study', 'eng')">英语</button>
+                <button class="btn-mini" onclick="Game.doAction('study', 'phy')">物理</button>
+                <button class="btn-mini" onclick="Game.doAction('study', 'che')">化学</button>
+                <button class="btn-mini" onclick="Game.doAction('study', 'bio')">生物</button>
+            </div>
+
+            <button class="btn-action" onclick="UI.toggleMenu('menu-test')">
+                <h5>📝 单科随堂小测</h5>
+                <p>小测验逼出潜能，提分效果相当于 1.5 次自习</p>
+                <span class="cost-tag">¥500 | AP: 1</span>
+            </button>
+            <div class="sub-menu" id="menu-test">
+                <button class="btn-mini" onclick="Game.doAction('test', 'chi')">语文测</button>
+                <button class="btn-mini" onclick="Game.doAction('test', 'mat')">数学测</button>
+                <button class="btn-mini" onclick="Game.doAction('test', 'eng')">英语测</button>
+                <button class="btn-mini" onclick="Game.doAction('test', 'phy')">物理测</button>
+                <button class="btn-mini" onclick="Game.doAction('test', 'che')">化学测</button>
+                <button class="btn-mini" onclick="Game.doAction('test', 'bio')">生物测</button>
+            </div>
+
+            <button class="btn-action" onclick="UI.toggleMenu('menu-train')">
+                <h5>🚀 课外魔鬼特训班</h5>
+                <p>重金名师，包含的两科均获得 2 次自习的效果</p>
+                <span class="cost-tag" id="cost-train">¥2000 | AP: 2</span>
+            </button>
+            <div class="sub-menu" id="menu-train">
+                <button class="btn-mini" onclick="Game.doAction('train', 'mat_phy')">数理强基</button>
+                <button class="btn-mini" onclick="Game.doAction('train', 'chi_eng')">语英专项</button>
+                <button class="btn-mini" onclick="Game.doAction('train', 'che_bio')">生化实验</button>
+            </div>
+
+            <button class="btn-action" onclick="Game.doMockExam()">
+                <h5>📚 组织全真模拟考</h5>
+                <p>买卷子直接开考！全科获 1 次自习效果，不记入历史档案</p>
+                <span class="cost-tag">¥4000 | AP: 2</span>
+            </button>
+
+            <h4 style="margin:15px 0 10px 0; color:#64748b; font-size:0.9em;">☕ 状态管理</h4>
+
+            <button class="btn-action" onclick="UI.showDoctorModal()">
+                <h5>🏥 聘请私人医生</h5>
+                <p>立刻治愈 1 名学生的病假状态，不消耗行动力</p>
+                <span class="cost-tag">¥1000 | AP: 0</span>
+            </button>
+
+            <button class="btn-action" onclick="UI.showHotpotModal()">
+                <h5 id="title-hotpot">🍲 包场九宫格火锅</h5>
+                <p>全班聚餐！清空所有人压力，70%概率洗掉负面天赋</p>
+                <span class="cost-tag" id="cost-hotpot">¥3000 | AP: 2</span>
+            </button>
+
+            <button class="btn-action" onclick="Game.doAction('rest', 'snack')">
+                <h5 id="title-snack">🍢 校门口买小吃</h5>
+                <p>便宜实惠，小幅缓解全班压力</p>
+                <span class="cost-tag" id="cost-snack">¥500 | AP: 1</span>
+            </button>
+
+            <button class="btn-action" onclick="Game.doAction('rest', 'walk')">
+                <h5>🚶 广场免费散步</h5>
+                <p>零消耗缓解压力</p>
+                <span class="cost-tag">¥0 | AP: 1</span>
+            </button>
+        </div>
+
+        <div id="panel-fac" class="panel-content">
+            <div id="fac-container"></div>
+            <p style="font-size:0.8em; color:#7f8c8d; margin-top:20px;">提升设施可显著减轻学生压力、增强学习收益并抵御恶劣天气造成的生病概率。</p>
+        </div>
+    </aside>
+
+    <main class="main-view">
+        <div style="display:flex; gap:10px; margin-bottom:15px; border-bottom:2px solid #eee; padding-bottom:10px;">
+            <button style="padding:10px 20px; background:var(--primary); color:white;" onclick="UI.switchMain('classroom')" id="btn-classroom">🏫 教室概况</button>
+            <button style="padding:10px 20px; background:var(--border); color:white;" onclick="UI.switchMain('archive')" id="btn-archive">📂 学生档案</button>
+        </div>
+
+        <div id="view-classroom" class="stu-grid"></div>
+
+        <div id="view-archive" class="hidden">
+            <div id="arc-tabs" style="margin-bottom: 15px;"></div>
+            <div id="arc-detail" style="border:1px solid var(--border); border-radius:12px; padding:20px;"></div>
+        </div>
+    </main>
+
+    <aside class="right-panel">
+        <div class="weather-panel">
+            <div class="month-tag hidden" id="sprint-tag">冲刺月</div>
+            <div style="font-size: 0.9em; color:#64748b; font-weight:bold;" id="ui-season">秋季</div>
+            <div style="font-size: 3em; margin: 10px 0;" id="ui-weather">☀️</div>
+            <div style="font-size: 1em; font-weight:bold; color:var(--primary);" id="ui-weather-txt">秋高气爽</div>
+        </div>
+        <div class="log-panel" id="log-area"></div>
+    </aside>
+</div>
+
+<div id="hotpot-modal" class="overlay hidden">
+    <div class="modal-box" style="text-align: center;">
+        <h2 class="modal-title">🍲 全班包场吃火锅</h2>
+        <p>消耗 ¥3000 和 2 点行动力，清空全班压力，并有 70% 概率消除大家身上的负面天赋。</p>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button style="flex:1; padding:15px; background:var(--border); color:var(--primary);" onclick="UI.closeModal('hotpot-modal')">取消</button>
+            <button style="flex:2; padding:15px; background:var(--danger); color:white;" onclick="Game.confirmHotpot()">痛快买单！</button>
+        </div>
+    </div>
+</div>
+
+<div id="doctor-modal" class="overlay hidden">
+    <div class="modal-box">
+        <h2 class="modal-title">🏥 聘请私人医生</h2>
+        <p>消耗 ¥1000 立即消除所选学生的病假状态 (0 AP)。</p>
+        <div id="doctor-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom: 20px;"></div>
+        <button style="width:100%; padding:15px; background:var(--border); color:var(--primary);" onclick="UI.closeModal('doctor-modal')">关闭</button>
+    </div>
+</div>
+
+<div id="weekly-modal" class="overlay hidden">
+    <div class="modal-box">
+        <h2 class="modal-title">📝 周考复盘分配</h2>
+        <p>通过本周的以赛代练，你获得了 <b><span id="weekly-pts" style="color:var(--danger); font-size:1.2em;">3</span></b> 点提升点数。请分配（全班共享微幅提升）：</p>
+        <div id="weekly-alloc" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom: 25px;"></div>
+        <button style="width:100%; padding:15px; background:var(--success); color:white; font-size:1.1em;" onclick="Game.confirmWeekly()">确认分配并继续</button>
+    </div>
+</div>
+
+<div id="choice-modal" class="overlay hidden">
+    <div class="modal-box">
+        <h2 class="modal-title" style="color:var(--warning)">⚠️ 突发状况</h2>
+        <p id="choice-desc" style="font-size:1.1em; line-height:1.6; color:var(--text); margin-bottom:20px;"></p>
+        <div class="choice-grid" id="choice-btns"></div>
+    </div>
+</div>
+
+<div id="exam-modal" class="overlay hidden" style="background:var(--bg)">
+    <div style="width: 95%; max-width: 1400px; background:white; padding:30px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.1); height:85vh; display:flex; flex-direction:column;">
+        <h1 id="exam-title" style="color:var(--cq-red); text-align:center; font-size:2.5em; margin:0 0 5px 0;">月考</h1>
+        <p id="exam-rewards-txt" style="text-align:center; color:#64748b; margin-top:0; font-weight:bold;"></p>
+        <div style="flex:1; overflow-y:auto; padding-right:10px;">
+            <table class="exam-table" id="exam-table"></table>
+        </div>
+        <button id="exam-close-btn" class="hidden" style="width:300px; margin:20px auto 0 auto; padding:15px; background:var(--primary); color:white; font-size:1.2em; border-radius:30px;" onclick="UI.closeExam()">确认成绩并入档</button>
+    </div>
+</div>
+
+<div id="gaokao-modal" class="overlay hidden">
+    <div class="modal-box" style="text-align:center; border: 5px solid var(--cq-red);">
+        <h1 style="color:var(--cq-red); font-size:3em;">🎓 2026 高考</h1>
+        <p style="font-size:1.2em; line-height:1.6;">终于到了这一天。无论过去多少个夜晚在刷题，无论退役时有多少遗憾，现在，所有的努力都将凝结在答题卡上。</p>
+        <button onclick="Game.startGaokao()" style="padding:20px 50px; background:var(--cq-red); color:white; font-size:1.5em; border-radius:50px; margin-top:20px; box-shadow: 0 10px 20px rgba(230,57,70,0.3);">奔赴考场</button>
+    </div>
+</div>
+
+<div id="ending-modal" class="overlay hidden" style="background:var(--bg); overflow-y:auto; padding: 40px 0;">
+    <div class="modal-box" style="max-width: 900px; text-align:center; margin: 0 auto;">
+        <h1 style="font-size:2.5em; color:var(--primary); margin-bottom:10px;">🎓 2026届 毕业盛典 🎓</h1>
+        <div id="ending-player" style="background:#fef9e7; padding:20px; border:2px solid #f59e0b; border-radius:8px; margin-bottom:30px; text-align:left;"></div>
+        <h3 style="color:var(--primary); border-bottom: 2px solid var(--accent); padding-bottom:5px; text-align:left;">🗺️ 全国大一新生蹭饭地图</h3>
+        <div id="ending-cengfan" class="cengfan-grid" style="text-align:left; margin-bottom:30px;"></div>
+        <div style="display:flex; gap:15px; justify-content:center;">
+            <button style="padding:15px 30px; background:var(--secondary); color:white; font-size:1.2em;" onclick="Game.returnToClass()">回到班级 (彩蛋)</button>
+            <button style="padding:15px 30px; background:var(--primary); color:white; font-size:1.2em;" onclick="location.reload()">再带一届</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/** ================== 核心字典与配置 ================== */
+const CONFIG = {
+    SUBJECTS: [
+        { id: 'chi', n: '语文', cap: 150 }, { id: 'mat', n: '数学', cap: 150 }, { id: 'eng', n: '英语', cap: 150 },
+        { id: 'phy', n: '物理', cap: 100 }, { id: 'che', n: '化学', cap: 100 }, { id: 'bio', n: '生物', cap: 100 }
+    ],
+    GRADES: [
+        { l: 'US', v: 148 }, { l: 'SSS+', v: 142 }, { l: 'SSS', v: 135 },
+        { l: 'SS', v: 125 }, { l: 'S', v: 115 }, { l: 'A', v: 100 },
+        { l: 'B', v: 85 }, { l: 'C', v: 70 }, { l: 'D', v: 50 }, { l: 'E', v: 0 }
+    ],
+    FACILITIES: [
+        { id: 'desk', n: '课桌椅', lv: ['破木桌', '普通课桌', '人体工学椅'], p: [0, 2000, 6000], d: '降低复习压力' },
+        { id: 'tech', n: '教学硬件', lv: ['粉笔黑板', '投影仪', '智慧屏'], p: [0, 3000, 8000], d: '提高吸收效率' },
+        { id: 'ac', n: '恒温系统', lv: ['无', '空调', '中央新风'], p: [0, 2500, 7000], d: '减免恶劣天气生病率与惩罚' }
+    ],
+    TALENTS: [
+        { id: 't1', n: '解析眼', t: 'pos', d: '数学/物理提升+20%' }, { id: 't2', n: '语感', t: 'pos', d: '英语提升+20%' },
+        { id: 't3', n: '大心脏', t: 'pos', d: '压力自然增长减半' }, { id: 't4', n: '实验狂', t: 'pos', d: '化/生提升+20%' },
+        { id: 't5', n: '卷王', t: 'pos', d: '全科微弱加成' }, { id: 't6', n: '锦鲤', t: 'pos', d: '考试不易发挥失常' },
+        { id: 't7', n: '记忆大师', t: 'pos', d: '生物/化学提升+30%' }, { id: 't8', n: '逻辑鬼才', t: 'pos', d: '数学/物理提升+30%' },
+        { id: 'n1', n: '粗心', t: 'neg', d: '大考易扣分' }, { id: 'n2', n: '玻璃心', t: 'neg', d: '压力极易升高' }, 
+        { id: 'n3', n: '偏科', t: 'neg', d: '大考随机发挥拉胯' }, { id: 'n4', n: '网瘾', t: 'neg', d: '概率翘课打CF' },
+        { id: 'n5', n: '失眠', t: 'neg', d: '每周额外增加压力' }
+    ],
+    UNIS: [
+        { min: 685, list: ['清华大学 (北京)', '北京大学 (北京)'] },
+        { min: 650, list: ['复旦大学 (上海)', '上海交通大学 (上海)', '浙江大学 (杭州)', '中国科学技术大学 (合肥)', '南京大学 (南京)', '哈尔滨工业大学 (哈尔滨)', '西安交通大学 (西安)'] },
+        { min: 600, list: ['重庆大学 (重庆)', '四川大学 (成都)', '电子科大 (成都)', '中南大学 (长沙)', '厦门大学 (厦门)', '山东大学 (济南)', '武汉大学 (武汉)'] },
+        { min: 500, list: ['重庆邮电大学 (重庆)', '西南大学 (重庆)', '合肥工业大学 (合肥)', '郑州大学 (郑州)', '福州大学 (福州)'] },
+        { min: 0, list: ['重庆蓝翔技校 (重庆)', '家里蹲大学 (本地)', '复读高中 (本地)'] }
+    ]
+};
+const SEASONS = { '8':'秋', '9':'秋', '10':'秋', '11':'冬', '12':'冬', '1':'冬', '2':'春', '3':'春', '4':'春', '5':'夏', '6':'夏' };
+const WEATHER_POOL = {
+    '秋': [{i:'☀️', n:'秋高气爽'}, {i:'🌧️', n:'秋雨连绵'}],
+    '冬': [{i:'🌫️', n:'湿冷大雾', eff:'cold'}, {i:'🌨️', n:'寒潮入侵', eff:'cold'}],
+    '春': [{i:'🌤️', n:'春暖花开'}, {i:'🌧️', n:'春雨绵绵'}],
+    '夏': [{i:'🥵', n:'高温预警', eff:'hot'}, {i:'⛈️', n:'狂风暴雨'}]
+};
+const EXAM_EVENTS = {
+    'chi': [{t:'作文偏题被扣', v:-15}, {t:'阅读灵光一闪', v:8}, {t:'默写完全忘了', v:-5}, {t:'古文语感极佳', v:5}],
+    'mat': [{t:'选择题最后蒙对', v:5}, {t:'大题计算全错', v:-10}, {t:'忘了写解扣分', v:-2}, {t:'解析几何顺利解出', v:10}],
+    'eng': [{t:'听力广播全是杂音', v:-10}, {t:'阅读遇到生词崩溃', v:-8}, {t:'作文套用高级句型', v:5}, {t:'完形全凭语感选对', v:8}],
+    'phy': [{t:'受力分析画反', v:-8}, {t:'大题没写单位', v:-3}, {t:'压轴题完美拿捏', v:10}, {t:'实验题蒙对了', v:5}],
+    'che': [{t:'方程式配平失败', v:-5}, {t:'推断题看错条件', v:-8}, {t:'角落知识点考到', v:5}, {t:'计算小数点点错', v:-3}],
+    'bio': [{t:'遗传题算错概率', v:-6}, {t:'概念彻底记混', v:-8}, {t:'基因图谱一眼看穿', v:8}, {t:'选择题全对', v:10}]
+};
+/** ================== 核心状态与引擎 ================== */
+let State = {
+    week: 1, month: 8, year: 2025, money: 0, ap: 3, maxAp: 3, diff: 'normal', isGraduated: false, isMockExam: false,
+    weather: {i:'☀️', n:'晴朗', eff:''}, season: '秋',
+    fac: { desk: 0, tech: 0, ac: 0 },
+    tempAlloc: {},
+    students: []
+};
+const Game = {
+    start(diff) {
+        State.diff = diff;
+        State.money = diff === 'easy' ? 10000 : 2000;
+        let baseStat = diff === 'easy' ? 65 : 40;
+        const defaultNames = ["Double10", "_Sparktasia_", "paper_", "GoldSpade", "xxxxxzy", "_Communist"];
+        let names = [];
+        for (let i = 0; i < 6; i++) {
+            let inputName = document.getElementById(`name-${i}`).value.trim();
+            names.push(inputName || defaultNames[i]);
+        }
+
+        let posPool = CONFIG.TALENTS.filter(t=>t.t==='pos');
+        let negPool = CONFIG.TALENTS.filter(t=>t.t==='neg');
+        State.students = names.map(n => {
+            // 开局随机2正1负天赋
+            let stPos = this.shuffleArray([...posPool]).slice(0, 2);
+            let stNeg = this.shuffleArray([...negPool]).slice(0, 1);
+            
+            return {
+                name: n, status: 'normal', stress: 30 + Math.random()*20, sickTimer: 0,
+                history: { scores: [], ranks: [] },
+                talents: [...stPos, ...stNeg],
+                mastery: { chi: baseStat+5, mat: baseStat+20, eng: baseStat-10, phy: baseStat+10, che: baseStat, bio: baseStat }
+            };
+        });
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('main-header').classList.remove('hidden');
+        document.getElementById('main-body').classList.remove('hidden');
+        
+        this.updateWeather();
+        this.log("新学期开始，目标：2026年6月高考！", "[档案建立]");
+        this.updateUI();
+    },
+
+    shuffleArray(arr) {
+        let res = [...arr];
+        for (let i = res.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [res[i], res[j]] = [res[j], res[i]];
+        }
+        return res;
+    },
+
+    getRandStu(num) {
+        return this.shuffleArray(State.students).slice(0, num);
+    },
+
+    getGainMultiplier(sub, cur) {
+        // 阈值之前稍微好提一点
+        if (sub === 'mat' && cur < 120) return 1.4;
+        if (sub === 'eng' && cur < 110) return 1.4;
+        if (sub === 'chi' && cur < 100) return 1.4;
+        let cap = CONFIG.SUBJECTS.find(x=>x.id===sub).cap;
+        let decayExp = sub === 'chi' ? 1.5 : 3.0;
+        return Math.max(0.05, 1 - Math.pow(cur/cap, decayExp));
+    },
+
+    doAction(cat, sub) {
+        if(State.isGraduated) {
+            if(cat === 'study' || cat === 'train' || cat === 'test') return alert("同学们已经毕业啦哦！");
+            if(cat === 'rest' && sub === 'snack') { Game.log("学生们凑钱请你吃了校门口小吃！", "[压力清零]"); State.students.forEach(s=>s.stress=0); this.updateUI(); return;
+            }
+            if(cat === 'rest' && sub === 'walk') { Game.log("你独自在校园散步，回忆着他们的高三。", "[思绪万千]");
+            return; }
+        }
+
+        if(State.ap < 1 && !State.isGraduated) return alert("AP 不足！");
+        let activeCount = State.students.filter(s=>s.sickTimer===0).length;
+        if(activeCount === 0) return alert("全班都病假了！");
+
+        let costAP = 0, costMoney = 0;
+        if (cat === 'study') { costAP = 1; }
+        else if (cat === 'test') { costAP = 1;
+        costMoney = 500; }
+        else if (cat === 'train') { costAP = 2;
+        costMoney = 2000; }
+        else if (cat === 'rest') { costAP = sub==='walk'?1 : 1;
+        costMoney = sub==='walk'?0 : 500; } 
+
+        if (State.ap < costAP && !State.isGraduated) return alert("AP 不足！");
+        if (State.money < costMoney) return alert("班费不足！");
+        
+        if(!State.isGraduated) { State.ap -= costAP; State.money -= costMoney;
+        }
+
+        let techBonus = 1 + (State.fac.tech * 0.15);
+        let deskReduce = State.fac.desk * 5; 
+        let diffMod = State.diff === 'hard' ? 0.8 : 1.0;
+        State.students.filter(s=>s.sickTimer===0).forEach(s => {
+            if(s.talents.some(t=>t.id==='n4') && Math.random() < 0.15) {
+                this.log(`${s.name} 翘课去机房打 CF 去了！`, "[网瘾发作]");
+                return;
+            }
+
+            if(cat === 'study' || cat === 'test') {
+              
+                let baseGain = (sub === 'chi' ? 1.5 : 2.5) * techBonus * this.getGainMultiplier(sub, s.mastery[sub]) * diffMod;
+                if(cat === 'test') baseGain *= 1.5; // 小测 = 1.5倍自习
+                
+                if(s.talents.some(t=>t.id==='t5')) baseGain *= 1.2;
+                if((sub==='mat'||sub==='phy') && s.talents.some(t=>t.id==='t1')) baseGain *= 1.2;
+ 
+                if((sub==='mat'||sub==='phy') && s.talents.some(t=>t.id==='t8')) baseGain *= 1.3;
+                if((sub==='eng') && s.talents.some(t=>t.id==='t2')) baseGain *= 1.2;
+                if((sub==='che'||sub==='bio') && s.talents.some(t=>t.id==='t4')) baseGain *= 1.2;
+                if((sub==='che'||sub==='bio') && s.talents.some(t=>t.id==='t7')) baseGain *= 1.3;
+                s.mastery[sub] += baseGain;
+                s.stress += Math.max(2, (cat==='test'?15:12) - deskReduce);
+            }
+            else if (cat === 'train') {
+                let subs = sub.split('_');
+                subs.forEach(su => {
+                    let baseGain = (su === 'chi' ? 1.5 : 2.5) * 2.0 * techBonus * this.getGainMultiplier(su, s.mastery[su]) * diffMod;
+                    s.mastery[su] += baseGain;
+                });
+                s.stress += Math.max(10, 25 - deskReduce);
+            }
+            else if (cat === 'rest') {
+                if(sub === 'walk') s.stress = Math.max(0, s.stress - 20);
+                if(sub === 'snack') s.stress = Math.max(0, s.stress - 30);
+            }
+        });
+        
+        UI.hideAllMenus();
+        this.updateUI();
+        if(cat !== 'rest') {
+            let logTxt = cat==='study'?`组织了自习` : cat==='test'?`进行了随堂测验` : `开启了特训`;
+            let effTxt = costMoney>0?`[资金-${costMoney}]` : ``;
+            this.log(logTxt, effTxt);
+        }
+    },
+
+    healDoctor(sIdx) {
+        if(State.money < 1000) return alert("班费不足！");
+        State.money -= 1000;
+        let s = State.students[sIdx];
+        s.sickTimer = 0;
+        UI.closeModal('doctor-modal');
+        this.log(`请私人医生治好了 ${s.name}。`, "[资金-1000, 恢复健康]");
+        this.updateUI();
+    },
+
+    confirmHotpot() {
+        if(State.isGraduated) {
+            Game.log("学生们重返母校，凑份子请你吃了一顿顶级的九宫格老火锅！", "[极度愉悦]");
+            State.students.forEach(s=>s.stress=0);
+            UI.closeModal('hotpot-modal');
+            this.updateUI();
+            return;
+        }
+
+        let cost = 3000;
+        if(State.money < cost) return alert("班费不够包场！");
+        if(State.ap < 2) return alert("AP不足！");
+
+        State.money -= cost; State.ap -= 2;
+        let curedNames = [];
+        State.students.forEach(s => {
+            s.stress = 0;
+            let initialLen = s.talents.length;
+            s.talents = s.talents.filter(t => t.t !== 'neg' || Math.random() > 0.7);
+            if(s.talents.length < initialLen) curedNames.push(s.name);
+        });
+        UI.closeModal('hotpot-modal');
+        this.log(`花费 ¥3000 包场吃火锅。`, `[压力清空${curedNames.length>0 ? `, ${curedNames.join(',')}克服了心魔`:''}]`);
+        this.updateUI();
+    },
+
+    doMockExam() {
+        if(State.money < 4000) return alert("资金不足买题！");
+        if(State.ap < 2) return alert("AP不足！");
+        State.money -= 4000; State.ap -= 2;
+        State.isMockExam = true;
+
+        let techBonus = 1 + (State.fac.tech * 0.15);
+        let diffMod = State.diff === 'hard' ? 0.8 : 1.0;
+        // 全科提升1次自习效果
+        State.students.filter(s=>s.sickTimer===0).forEach(s => {
+            CONFIG.SUBJECTS.forEach(sub => {
+                let baseGain = (sub.id === 'chi' ? 1.5 : 2.5) * techBonus * this.getGainMultiplier(sub.id, s.mastery[sub.id]) * diffMod;
+                s.mastery[sub.id] += baseGain;
+            });
+            s.stress 
+            += 15;
+        });
+
+        this.log("豪掷 ¥4000 组织全真模拟考！", "[全科能力+]");
+        this.prepareExam("全真模拟考试", true);
+        // isMock = true
+    },
+
+    nextTurn() {
+        State.week++;
+        State.students.forEach(s => {
+            if(s.sickTimer > 0) {
+                s.sickTimer--;
+                if(s.sickTimer === 0) this.log(`${s.name} 病好了。`, "[状态恢复]");
+            }
+        });
+        if(State.week === 2 && State.month !== 6) return UI.showWeeklyModal();
+
+        if(State.week > 4) {
+            State.week = 1;
+            State.month++;
+            if(State.month > 12) { State.month = 1; State.year++; }
+            this.updateWeather();
+            if(State.month === 5 && State.year === 2026) {
+                State.maxAp = 4;
+                this.log("🔥 进入五月冲刺期！大家进入狂暴状态，每周获得 4 点行动力！", "[冲刺开启]");
+                State.students.forEach(s=>s.stress+=20);
+                this.prepareExam("四月调考");
+                return;
+            }
+            if(State.month === 6 && State.year === 2026) {
+                document.getElementById('gaokao-modal') && document.getElementById('gaokao-modal').classList.remove('hidden');
+                return;
+            } else {
+                return this.prepareExam();
+            }
+        }
+        this.finishTurnLogic();
+    },
+
+    confirmWeekly() {
+        let pts = parseInt(document.getElementById('weekly-pts').innerText);
+        if(pts > 0) return alert("请分配完！");
+        
+        State.students.filter(s=>s.sickTimer===0).forEach(s => {
+            for(let k in State.tempAlloc) { s.mastery[k] += State.tempAlloc[k] * 1.5; }
+        });
+        UI.closeModal('weekly-modal');
+        this.log("周考复盘，薄弱学科微幅补强。");
+        this.finishTurnLogic();
+    },
+
+    triggerRandomEvent() {
+        // 多加几个特殊事件，每周60%概率触发
+        if(Math.random() > 0.6) return;
+        let events = [
+            {
+                c: s => s.fac.desk < 2,
+                t: "由于课桌椅陈旧摇晃，学生们联合写信向你请求修理。",
+                c1: { n: "拨专款直接升级课桌", f: ()=>{ let cost = CONFIG.FACILITIES[0].p[State.fac.desk+1];
+                if(State.money>=cost){State.money-=cost; State.fac.desk++; Game.log("升级了课桌", "[设施升级]");}else{Game.log("没钱修桌子","[压力+]");State.students.forEach(x=>x.stress+=20);} } },
+                c2: { n: "厉声驳回：克服困难", f: ()=>{ State.students.forEach(s=>s.stress+=25);
+                Game.log("驳回了换桌子请求", "[压力++]"); } }
+            },
+            {
+                c: s => s.weather.eff === 'hot' && s.fac.ac < 2,
+                t: "酷暑难耐，电风扇已经失去作用，大家热得发晕，请求改善制冷。",
+                c1: { n: "咬牙升级空调系统", f: ()=>{ let cost = CONFIG.FACILITIES[2].p[State.fac.ac+1];
+                if(State.money>=cost){State.money-=cost; State.fac.ac++; Game.log("升级了恒温系统", "[设施升级]");}else{Game.log("没钱装空调","[压力+]");State.students.forEach(x=>x.stress+=20);} } },
+                c2: { n: "心静自然凉！", f: ()=>{ State.students.forEach(s=>s.stress+=30);
+                Game.log("大家都在流汗", "[压力++]"); } }
+            },
+            {
+                c: s => true,
+                t: "巡查机房时，你隔着窗户发现两名学生似乎在偷偷打 Codeforces 比赛！",
+                c1: { n: "直接冲进去没收电脑", f: ()=>{ let vs=Game.getRandStu(2);
+                vs.forEach(s=>{s.stress+=35;s.mastery.mat-=2}); Game.log(`没收了 ${vs[0].name} 和 ${vs[1].name} 的作案工具`, "[压力++, 纪律加强]"); } },
+                c2: { n: "装作没看见，顺便祈祷他们能上分", f: ()=>{ let vs=Game.getRandStu(2);
+                vs.forEach(s=>{s.stress=0;s.mastery.mat+=5;s.mastery.phy+=3;}); Game.log(`放任 ${vs[0].name} 和 ${vs[1].name} 打CF，这下不得不绿名了`, "[压力清零, 数理+]"); } }
+            },
+            {
+                c: s => true,
+                t: "课代表跑来申请：『老师，大家觉得纯看书太枯燥了，想去实验室做做真实的生化实验！』",
+                c1: { n: "立刻安排！(¥1000)", f: ()=>{ if(State.money>=1000){ State.money-=1000;
+                State.students.forEach(s=>{s.stress=Math.max(0, s.stress-20); s.mastery.che+=6; s.mastery.bio+=6;}); Game.log(`去实验室玩火`, "[资金-1000, 生化+, 压力-]"); }else{ Game.log("资金不足以做实验", "[失望]"); State.students.forEach(s=>s.stress+=10);
+                } } },
+                c2: { n: "安全第一，乖乖刷题", f: ()=>{ State.students.forEach(s=>s.stress+=10);
+                Game.log("驳回了实验请求", "[压力+]"); } }
+            },
+            {
+                c: s => true,
+                t: "你在走廊上听到某位退役的同学在悄悄叹气：『要是当时再多做出一道题，可能现在就不必在这受苦了……』",
+                c1: { n: "把Ta叫进办公室，耐心安慰", f: ()=>{ let s=Game.getRandStu(1)[0];
+                s.stress = Math.max(0, s.stress-40); Game.log(`做通了 ${s.name} 的思想工作`, "[心态大好]"); } },
+                c2: { n: "走上前，严肃地敲响警钟", f: ()=>{ let s=Game.getRandStu(1)[0];
+                s.stress+=30; if(!s.talents.some(t=>t.id==='t5')) s.talents.push(CONFIG.TALENTS.find(x=>x.id==='t5')); Game.log(`痛骂了 ${s.name} 一顿，打断了回忆`, "[压力++, 获得卷王]"); } }
+            },
+            {
+                c: s => true,
+                t: "上一届毕业的学长回校探望，看到你们班在苦熬，非常感动。",
+                c1: { n: "感谢并接受他的捐款", f: ()=>{ State.money+=1500;
+                Game.log("收到学长捐助 ¥1500", "[天降横财]"); } },
+                c2: { n: "婉拒捐款，让他传授经验", f: ()=>{ State.students.forEach(s=>{s.stress=Math.max(0, s.stress-15); s.mastery.chi+=3;s.mastery.mat+=3;});
+                Game.log("学长分享了独门复习法", "[全班微幅提升, 压力-]"); } }
+            }
+        ];
+        let validEvs = events.filter(e => e.c(State));
+        if(validEvs.length > 0) {
+            window.currEv = validEvs[Math.floor(Math.random()*validEvs.length)];
+            UI.showChoiceModal(window.currEv);
+        }
+    },
+
+    finishTurnLogic() {
+        State.ap = State.maxAp;
+        State.money += 500 + (State.students.length * 100); 
+
+        // 运动会特判
+        if (State.month === 10 && State.week === 1) {
+            this.log("🏃‍♂️ 全校秋季运动会召开！大家在赛场上尽情挥洒汗水！", "[全员压力清空]");
+            State.students.forEach(s => s.stress = 0);
+            this.updateUI();
+            return;
+        }
+        
+        // 极端天气自然生病率 (不用散步也有概率)
+        let weatherSickChance = 0;
+        if (State.weather.eff === 'cold' || State.weather.eff === 'hot') {
+            weatherSickChance = State.fac.ac === 0 ?
+            0.10 : (State.fac.ac === 1 ? 0.05 : 0);
+        }
+
+        State.students.forEach(s => {
+            let heal = s.talents.some(t=>t.id==='t3') ? 8 : 4;
+            s.stress = Math.max(0, s.stress - heal);
+            
+            if(s.talents.some(t=>t.id==='n5')) s.stress += 8; // 失眠
+
+            if(s.stress > 90 && 
+            Math.random() > 0.7) {
+                let negs = CONFIG.TALENTS.filter(t=>t.t==='neg');
+                let getT = negs[Math.floor(Math.random()*negs.length)];
+                if(!s.talents.some(x=>x.id===getT.id)) { s.talents.push(getT); this.log(`⚠️ ${s.name} 心态崩溃了！`, `[负面: ${getT.n}]`); }
+            }
+
+            // 恶劣天气判定
+          
+            if(weatherSickChance > 0 && s.sickTimer === 0 && Math.random() < weatherSickChance) {
+                s.sickTimer = 4;
+                this.log(`糟糕，${s.name} 因为天气原因病倒了！`, "[生病1个月]");
+            }
+        });
+        this.triggerRandomEvent();
+        this.updateUI();
+    },
+
+    updateWeather() {
+        State.season = SEASONS[State.month.toString()];
+        let pool = WEATHER_POOL[State.season];
+        State.weather = pool[Math.floor(Math.random()*pool.length)];
+    },
+
+    getRealRank(score) {
+        // 对数划分：状元720，681为159名，往后线性+二次插值
+        if (score >= 720) return 1;
+        if (score >= 681) {
+            // 在 681(159名) 到 720(1名) 之间，用二次曲线模拟人数指数衰减
+            let fraction = (720 - score) / 39;
+            // 0 (720分) 到 1 (681分)
+            return Math.floor(1 + 158 * Math.pow(fraction, 2));
+        }
+
+        const table = [
+            {s: 681, r: 159}, {s: 680, r: 176},
+            {s: 650, r: 1701}, {s: 600, r: 11716}, {s: 550, r: 32260},
+            {s: 500, r: 62078}, {s: 450, r: 91261}, {s: 400, r: 112843},
+            {s: 350, r: 126882}, {s: 300, r: 134938}, {s: 250, r: 138444},
+ 
+           {s: 200, r: 139415}, {s: 180, r: 139478}, {s: 0, r: 140000}
+        ];
+        for(let i=0; i<table.length-1; i++) {
+            if(score >= table[i+1].s) {
+                let rangeS = table[i].s - table[i+1].s;
+                let rangeR = table[i+1].r - table[i].r;
+                let fraction = (table[i].s - score) / rangeS;
+                return Math.max(1, Math.round(table[i].r + fraction * rangeR));
+            }
+        }
+        return 140000;
+    },
+
+    prepareExam(forcedName = "", isMock = false) {
+        const m = document.getElementById('exam-modal');
+        let title = forcedName || (State.month === 9 ? "起点摸底" : State.month === 1 ? "一诊" : State.month === 3 ? "二诊" : "月度联考");
+        document.getElementById('exam-title').innerText = title;
+        document.getElementById('exam-rewards-txt').innerText = isMock ? "（本场为模拟考试，成绩不计入档案）" : "";
+        document.getElementById('exam-close-btn').classList.add('hidden');
+        m.classList.remove('hidden');
+
+        const tb = document.getElementById('exam-table');
+        tb.innerHTML = `<tr><th>姓名</th>${CONFIG.SUBJECTS.map(s=>`<th>${s.n}</th>`).join('')}<th style="background:var(--danger)">总分</th><th style="background:#8b5cf6">市排名</th><th style="width:250px; background:#f59e0b">考场动态</th></tr>`;
+
+        let rData = State.students.map(s => {
+            let obj = { name: s.name, scores: {}, total: 0, evTxt: "", ref: s };
+            let drop = s.talents.some(t=>t.id==='n3') ? 0.9 : 1;
+            let steady = s.talents.some(t=>t.id==='t6') ? 0 : 1;
+            let sickPen = s.sickTimer > 0 ? 0.8 : 1; 
+
+  
+            CONFIG.SUBJECTS.forEach(sub => {
+                let base = s.mastery[sub.id];
+                if(sub.id === 'chi' && base > 120) base = 120 + (base - 120)*0.1; 
+                
+                let sFac = 1 - (s.stress/600);
+  
+                let raw = base * sFac * drop * sickPen;
+                
+                let pGood = (base / sub.cap) * 0.4; 
+                let pBad = (1 - base / sub.cap) * 0.4 * (s.sickTimer>0?2:1); 
+
+         
+                let rnd = Math.random();
+                if(rnd < pGood) {
+                    let evList = EXAM_EVENTS[sub.id].filter(x=>x.v > 0);
+                    let ev = evList[Math.floor(Math.random()*evList.length)];
+                    obj.evTxt += `[${sub.n}]${ev.t}(+${ev.v})<br>`;
+                    raw += ev.v;
+                } else if (rnd > 1 - pBad) {
+                    let evList = EXAM_EVENTS[sub.id].filter(x=>x.v < 0);
+                    let ev = evList[Math.floor(Math.random()*evList.length)];
+                    obj.evTxt += `[${sub.n}]${ev.t}(${ev.v})<br>`;
+                    raw += (ev.v * (1-steady));
+                }
+
+                obj.scores[sub.id] = Math.max(0, Math.min(sub.cap, Math.round(raw)));
+            });
+
+            obj.total = Object.values(obj.scores).reduce((a,b)=>a+b, 0);
+            return obj;
+        });
+
+        // == 排名防重与修正逻辑 ==
+        rData.sort((a, b) => b.total - a.total);
+        for(let i = 0; i < rData.length; i++) {
+            if (i > 0 && rData[i].total === rData[i-1].total) {
+                rData[i].rank = rData[i-1].rank;
+            } else {
+                let calc = this.getRealRank(rData[i].total);
+                if (rData[i].total >= 720) {
+                    rData[i].rank = i + 1;
+                    // >=720就是前几名包揽
+                } else {
+                    // 保证后续名次必定比前面大（除平局外）
+                    rData[i].rank = Math.max(calc, i + 1, (i > 0 ? rData[i-1].rank + 1 : 1));
+                }
+            }
+        }
+
+        let cols = [...CONFIG.SUBJECTS.map(x=>x.id), 'total', 'rank', 'ev'];
+        rData.forEach((row, rIdx) => {
+            let tr = document.createElement('tr');
+            tr.innerHTML = `<td>${row.name} ${row.ref.sickTimer>0?'🤒':''}</td>`;
+            cols.forEach(c => tr.innerHTML += `<td id="c-${rIdx}-${c}" class="exam-cell ${c==='ev'?'event-col':''}"></td>`);
+            tb.appendChild(tr);
+        });
+        cols.forEach((colId, cIdx) => {
+            setTimeout(() => {
+                rData.forEach((row, rIdx) => {
+                    setTimeout(() => {
+                        let cell = document.getElementById(`c-${rIdx}-${colId}`);
+               
+                        if(colId === 'total') { cell.innerText = row.total; cell.style.color = "var(--danger)"; }
+                        else if(colId === 'rank') { cell.innerText = `第${row.rank}名`; cell.style.color = "#8b5cf6"; }
+                        else if(colId === 'ev') cell.innerHTML = row.evTxt || '-';
+              
+                        else {
+                            let cap = CONFIG.SUBJECTS.find(x=>x.id===colId).cap;
+                            cell.innerText = row.scores[colId];
+                            
+                            cell.style.background = UI.getScoreColor(row.scores[colId], cap);
+                            if(row.scores[colId]/cap > 0.65) cell.style.color = 'white';
+                        }
+                        cell.classList.add('pop');
+                
+                    }, rIdx * 100);
+                });
+
+                if(cIdx === cols.length - 1) {
+                    setTimeout(() => {
+                        let rw = 0; let dt = [];
+                        
+         
+                        rData.forEach(r => {
+                            let prw = 0;
+                            if(r.rank === 1) { prw = 100000; if(!isMock) this.log(`🎉 震惊！${r.name} 荣获全市理科状元！`, "[巨额奖金]"); }
+            
+                            else if(r.rank <= 10) prw = 30000;
+                            else if(r.rank <= 100) prw = 10000;
+                            else if(r.rank <= 1000) prw = 5000;
+          
+                            else if(r.rank <= 5000) prw = 3000;
+                            else if(r.rank <= 50000) prw = 1000;
+                            
+              
+                            rw += prw;
+                            if(prw>0) dt.push(`${r.name}+${prw}`);
+                            
+                           
+                            if (!isMock) {
+                                r.ref.history.scores.push(r.total);
+                                r.ref.history.ranks.push(r.rank);
+                            }
+                        });
+                        if (!isMock) {
+                            let baseRw = 2000;
+                            State.money += (rw + baseRw);
+                            document.getElementById('exam-rewards-txt').innerText = `🏆 保底补助¥2000。达标奖励¥${rw} (${dt.join(', ') || '无'})`;
+                            this.log(`大考结算：共获 ¥${rw+baseRw}`, "[入账]");
+                        }
+                        document.getElementById('exam-close-btn').classList.remove('hidden');
+                    }, rData.length * 100 + 500);
+                }
+            }, cIdx * 700);
+        });
+    },
+
+    startGaokao() {
+        document.getElementById('gaokao-modal') && document.getElementById('gaokao-modal').classList.add('hidden');
+        this.prepareExam("全国统一高考 (重庆卷)");
+        document.getElementById('exam-close-btn').innerText = "查看录取去向";
+        document.getElementById('exam-close-btn').onclick = () => { State.isGraduated = true; this.showEnding(); };
+    },
+
+    showEnding() {
+        document.getElementById('exam-modal').classList.add('hidden');
+        document.getElementById('ending-modal').classList.remove('hidden');
+
+        let totalClassScore = 0;
+        let cengfanHtml = "";
+
+        State.students.forEach(s => {
+            let fS = s.history.scores[s.history.scores.length - 1];
+            totalClassScore += fS;
+            
+            let tier = CONFIG.UNIS.find(u => fS >= u.min) || CONFIG.UNIS[4];
+            let uni = tier.list[Math.floor(Math.random()*tier.list.length)];
+            cengfanHtml += `<div 
+            class="cengfan-card">
+                <div style="font-size:1.5em;">📍</div>
+                <div><b>${s.name}</b><br><span style="font-size:0.85em;color:var(--accent);">${uni} (${fS}分)</span></div>
+            </div>`;
+        });
+        document.getElementById('ending-cengfan').innerHTML = cengfanHtml;
+
+        let avgScore = totalClassScore / State.students.length;
+
+        let pTxt = avgScore >= 685 ?
+        `均分 ${Math.round(avgScore)}！全员清北！神级教练，你被直接提拔为校长！` : 
+                   avgScore >= 650 ?
+        `均分 ${Math.round(avgScore)}！全员C9！神仙班级再续辉煌，你晋升为副校长！` :
+                   avgScore >= 600 ?
+        `均分 ${Math.round(avgScore)}！全员985！你获得了市级优秀教师称号，提拔为年级主任。` :
+                   avgScore >= 500 ?
+        `均分 ${Math.round(avgScore)}！全员211！无一人掉队，你稳稳保住了班主任的职位。` : 
+                   `均分 ${Math.round(avgScore)}。未能带领大家全部突破211线，家长频频投诉，你遗憾被下放去教初中。`;
+        document.getElementById('ending-player').innerHTML = `<h3>你的执教评价（按平均分）</h3><p style="font-size:1.1em; color:var(--text); font-weight:bold;">${pTxt}</p>`;
+    },
+
+    returnToClass() {
+        document.getElementById('ending-modal').classList.add('hidden');
+        State.ap = 'INF'; State.maxAp = 'INF';
+        document.getElementById('ui-ap').innerText = 'INF';
+        document.getElementById('ap-max-txt').innerText = '';
+        document.getElementById('btn-next-turn').innerText = '已毕业';
+        document.getElementById('btn-next-turn').disabled = true;
+        document.getElementById('title-snack').innerText = '🍢 同学请客吃小吃';
+        document.getElementById('cost-snack').innerText = '免费 | AP: 0';
+        document.getElementById('title-hotpot').innerText = '🍲 同学请客老火锅';
+        document.getElementById('cost-hotpot').innerText = '免费 | AP: 0';
+        document.getElementById('cost-train').innerText = '无法使用';
+        
+        this.log("同学们已经毕业，班级里空空荡荡，但偶尔他们会回来看你。", "[完结撒花]");
+        this.updateUI();
+    },
+
+    log(msg, eff = "") {
+        const area = document.getElementById('log-area');
+        area.innerHTML = `<div class="log-entry">
+            <span style="color:#94a3b8">[${State.year}届 ${State.month}月W${State.week}]</span> ${msg}
+            ${eff ?
+            `<span class="log-eff">${eff}</span>` : ''}
+        </div>` + area.innerHTML;
+    },
+
+    updateUI() {
+        document.getElementById('ui-time').innerText = `${State.year}年 ${State.month}月 W${State.week}`;
+        document.getElementById('ui-money').innerText = State.money;
+        if(!State.isGraduated) {
+            document.getElementById('ui-ap').innerText = State.ap;
+            document.getElementById('ap-max-txt').innerText = `/${State.maxAp}`;
+        }
+        document.getElementById('ui-weather').innerText = State.weather.i;
+        document.getElementById('ui-weather-txt').innerText = State.weather.n;
+        document.getElementById('ui-season').innerText = State.season + "季";
+        
+        if(State.month === 5 && State.year === 2026) document.getElementById('sprint-tag').classList.remove('hidden');
+        else document.getElementById('sprint-tag').classList.add('hidden');
+        
+        UI.renderClassroom();
+        UI.renderFacilities();
+        UI.renderArchiveTabs();
+    }
+};
+/** ================== UI 控制 ================== */
+const UI = {
+    switchTab(id) {
+        document.querySelectorAll('.panel-content').forEach(e=>e.classList.remove('active'));
+        document.querySelectorAll('.sidebar .tab-btn').forEach(e=>e.classList.remove('active'));
+        document.getElementById(`panel-${id}`).classList.add('active');
+        event.target.classList.add('active');
+    },
+    switchMain(id) {
+        document.getElementById('view-classroom').classList.add('hidden');
+        document.getElementById('view-archive').classList.add('hidden');
+        document.getElementById(`view-${id}`).classList.remove('hidden');
+    },
+    toggleMenu(id) { let e=document.getElementById(id); e.classList.contains('active')?e.classList.remove('active'):e.classList.add('active'); },
+    hideAllMenus() { document.querySelectorAll('.sub-menu').forEach(e=>e.classList.remove('active'));
+    },
+    closeModal(id) { document.getElementById(id).classList.add('hidden'); },
+    closeExam() { 
+        document.getElementById('exam-modal').classList.add('hidden'); 
+        if(!State.isMockExam) Game.nextTurn(); 
+        else { State.isMockExam = false; Game.updateUI(); }
+    },
+    
+    showChoiceModal(ev) {
+        document.getElementById('choice-desc').innerText = ev.t;
+        document.getElementById('choice-btns').innerHTML = `
+            <button class="btn-choice" onclick="UI.handleChoice(1)">${ev.c1.n}</button>
+            <button class="btn-choice" onclick="UI.handleChoice(2)">${ev.c2.n}</button>
+        `;
+        document.getElementById('choice-modal').classList.remove('hidden');
+    },
+    handleChoice(idx) { UI.closeModal('choice-modal'); idx===1?window.currEv.c1.f():window.currEv.c2.f(); Game.updateUI();
+    },
+    
+    showHotpotModal() {
+        if(State.isGraduated) return Game.confirmHotpot();
+        document.getElementById('hotpot-modal').classList.remove('hidden');
+    },
+
+    showDoctorModal() {
+        let sicks = State.students.map((s,i) => ({s, i})).filter(x => x.s.sickTimer > 0);
+        if(sicks.length === 0) return alert("当前没有学生生病！");
+        
+        document.getElementById('doctor-list').innerHTML = sicks.map(x => `
+            <div style="background:#f8fafc; padding:15px; border-radius:6px; border:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                <div><b>${x.s.name}</b> <span style="color:var(--danger); font-size:0.8em;">(病假剩余 ${x.s.sickTimer} 周)</span></div>
+                <button style="padding:8px 15px; background:var(--success); color:white;" onclick="Game.healDoctor(${x.i})">立刻治愈 (¥1000)</button>
+            </div>`).join('');
+        document.getElementById('doctor-modal').classList.remove('hidden');
+    },
+
+    showWeeklyModal() {
+        State.tempAlloc = {chi:0, mat:0, eng:0, phy:0, che:0, bio:0};
+        this.renderWeeklyAlloc();
+        document.getElementById('weekly-modal').classList.remove('hidden');
+    },
+    renderWeeklyAlloc() {
+        let ptsUsed = Object.values(State.tempAlloc).reduce((a,b)=>a+b,0);
+        document.getElementById('weekly-pts').innerText = 3 - ptsUsed;
+        document.getElementById('weekly-alloc').innerHTML = CONFIG.SUBJECTS.map(sub => `
+            <div style="background:#f8fafc; padding:10px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; border:1px solid #e2e8f0;">
+                <b>${sub.n}</b>
+                <div>
+                    <button style="padding:2px 8px; background:#cbd5e1;" onclick="UI.modWeekly('${sub.id}', -1)">-</button>
+             
+                    <span style="display:inline-block; width:20px; text-align:center;">${State.tempAlloc[sub.id]}</span>
+                    <button style="padding:2px 8px; background:var(--accent); color:white;" onclick="UI.modWeekly('${sub.id}', 1)">+</button>
+                </div>
+            </div>`).join('');
+    },
+    modWeekly(s, v) {
+        let u = Object.values(State.tempAlloc).reduce((a,b)=>a+b,0);
+        if(v>0 && u>=3) return; if(v<0 && State.tempAlloc[s]<=0) return;
+        State.tempAlloc[s] += v; this.renderWeeklyAlloc();
+    },
+
+    getScoreColor(val, cap) {
+        let r = val / cap;
+        if(r >= 0.95) return '#9333ea'; 
+        if(r >= 0.90) return '#e11d48'; 
+        if(r >= 0.80) return '#ea580c'; 
+        if(r >= 0.65) return '#16a34a';
+        if(r >= 0.50) return '#3b82f6'; 
+        return '#e2e8f0'; 
+    },
+    getRankTag(val, cap) {
+        let r = val / cap;
+        let g = CONFIG.GRADES.find(x => r >= x.v/150) || CONFIG.GRADES[9];
+        return g.l;
+    },
+
+    renderClassroom() {
+        document.getElementById('view-classroom').innerHTML = State.students.map(s => `
+            <div class="stu-card ${s.sickTimer>0?'sick':''}">
+                <div class="stu-header">
+                    <span class="stu-name">${s.name} ${s.sickTimer>0?`<span style="font-size:0.5em; background:var(--danger); color:white; padding:2px 6px; border-radius:4px; vertical-align:middle;">病假 ${s.sickTimer}周</span>`:''}</span>
+                    <span style="font-size:0.8em; 
+                    color:#94a3b8;">预估分: ${Math.round(Object.values(s.mastery).reduce((a,b)=>a+b,0))}</span>
+                </div>
+                <div class="tag-pool">
+                    ${s.talents.map(t=>`<span class="tag ${t.t==='neg'?'tag-neg':'tag-pos'}" title="${t.d}">${t.n}</span>`).join('')}
+                </div>
+                <div class="sub-grid">
+          
+                    ${CONFIG.SUBJECTS.map(sub => {
+                        let ratio = s.mastery[sub.id]/sub.cap;
+                        let textClass = ratio < 0.65 ?
+                        'dark-text' : '';
+                        return `<div class="sub-box"><span class="sub-label">${sub.n}</span><div class="sub-val ${textClass}" style="background:${this.getScoreColor(s.mastery[sub.id], sub.cap)}">${this.getRankTag(s.mastery[sub.id], sub.cap)}</div></div>`
+                    }).join('')}
+                </div>
+                <div style="font-size:0.7em; margin-top:12px; display:flex; justify-content:space-between; font-weight:bold;">
+                    <span>心理防线</span> <span style="color:${s.stress>85?'var(--danger)':'#334155'}">${Math.round(s.stress)}%</span>
+          
+                </div>
+                <div class="stress-bar"><div class="stress-fill" style="width:${Math.min(100,s.stress)}%; background:${s.stress>85?'var(--danger)':'var(--accent)'}"></div></div>
+            </div>`).join('');
+    },
+
+    renderFacilities() {
+        document.getElementById('fac-container').innerHTML = CONFIG.FACILITIES.map(f => {
+            let lv = State.fac[f.id];
+            return `<div style="border:1px solid var(--border); border-radius:8px; padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h4 style="margin:0; color:var(--primary);">${f.n} <span style="font-size:0.8em; color:var(--accent);">(Lv.${lv})</span></h4>
+     
+                    <p style="margin:5px 0 0 0; font-size:0.75em; color:#64748b;">${f.d}</p>
+                </div>
+                <button style="padding:8px 15px; background:var(--primary); color:white;" ${lv>=2?'disabled':''} onclick="Game.buyFac('${f.id}')">${lv>=2 ? '满级' : '¥'+f.p[lv+1]}</button>
+            </div>`;
+        }).join('');
+    },
+
+    renderArchiveTabs() {
+        document.getElementById('arc-tabs').innerHTML = State.students.map((s, i) => `<div class="arc-tab ${i===0?'active':''}" onclick="UI.showArcDetail(${i}, this)">${s.name}</div>`).join('');
+        if(State.students.length > 0) this.showArcDetail(0, document.querySelector('.arc-tab'));
+    },
+
+    showArcDetail(idx, el) {
+        document.querySelectorAll('.arc-tab').forEach(e=>e.classList.remove('active'));
+        if(el) el.classList.add('active');
+        let s = State.students[idx];
+        
+        let html = `<h2 style="margin-top:0; color:var(--primary);">${s.name} 核心档案</h2>`;
+        html += `<h4>📊 总分历程 (满分750)</h4><div class="chart-container">${this.drawBarChart(s.history.scores, 750, 'var(--accent)')}</div>`;
+        html += `<h4>📈 排名历程 (市级)</h4><div class="chart-container">${this.drawBarChart(s.history.ranks, 140000, '#8b5cf6', true)}</div>`;
+        document.getElementById('arc-detail').innerHTML = html;
+    },
+
+    drawBarChart(data, maxVal, color, reverse=false) {
+        if(!data || data.length < 1) return '<div style="width:100%; text-align:center; color:#94a3b8;">暂无大考数据</div>';
+        let totalSlots = 10; 
+        let barWidth = 100 / totalSlots - 4;
+        // 调细了柱体
+        let html = `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="width:100%; height:100%; overflow:visible;">`;
+        data.forEach((val, i) => {
+            let h = reverse ? (1 - val/maxVal)*100 : (val/maxVal)*100;
+            h = Math.max(5, Math.min(100, h)); 
+            html += `<rect x="${i * (100/totalSlots)}" y="${100 - h}" width="${barWidth}" height="${h}" fill="${color}" rx="1" />
+                     <text x="${i * (100/totalSlots) + barWidth/2}" y="${100 - h - 2}" font-size="4" fill="#666" 
+                     text-anchor="middle">${val}</text>`;
+        });
+        html += `</svg>`;
+        return html;
+    }
+};
+Game.buyFac = function(id) {
+    let f = CONFIG.FACILITIES.find(x=>x.id===id);
+    let lv = State.fac[id];
+    let cost = f.p[lv+1];
+    if(State.money >= cost) { State.money -= cost; State.fac[id]++; this.updateUI(); this.log(`升级了：${f.n}`, `[资金-${cost}]`); }
+    else alert("班费不足！");
+};
+
+</script>
+</body>
+</html>

@@ -13,7 +13,7 @@
         * { box-sizing: border-box; font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; transition: 0.2s;
         }
         body { background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column;
-        height: 100vh; overflow: hidden; }
+        min-height: 100vh; overflow-y: auto; overflow-x: hidden; }
 
         button { cursor: pointer; border: none; outline: none;
         border-radius: 6px; font-weight: bold; }
@@ -48,7 +48,7 @@
 
         /* 主体布局 */
         .app-body { display: grid;
-        grid-template-columns: 340px 1fr 320px; gap: 20px; padding: 20px; flex: 1; overflow: hidden;
+        grid-template-columns: 340px 1fr 320px; gap: 20px; padding: 20px; flex: 1; overflow-y: auto; overflow-x: hidden;
         }
 
         /* 左侧面板：决策 */
@@ -581,6 +581,7 @@ const Game = {
             if(cat === 'study' || cat === 'test') {
               
                 let baseGain = (sub === 'chi' ? 1.5 : 2.5) * techBonus * this.getGainMultiplier(sub, s.mastery[sub]) * diffMod;
+                if (s.stress > 80) baseGain *= Math.max(0, 1 - (s.stress - 80) / 100);
                 if(cat === 'test') baseGain *= 1.5; // 小测 = 1.5倍自习
                 
                 if(s.talents.some(t=>t.id==='t5')) baseGain *= 1.2;
@@ -597,6 +598,7 @@ const Game = {
                 let subs = sub.split('_');
                 subs.forEach(su => {
                     let baseGain = (su === 'chi' ? 1.5 : 2.5) * 2.0 * techBonus * this.getGainMultiplier(su, s.mastery[su]) * diffMod;
+                    if (s.stress > 80) baseGain *= Math.max(0, 1 - (s.stress - 80) / 100);
                     s.mastery[su] += baseGain;
                 });
                 s.stress += Math.max(10, 25 - deskReduce);
@@ -653,6 +655,7 @@ const Game = {
     },
 
     doMockExam() {
+        if(State.isGraduated) return alert("同学们已经毕业啦哦！");
         if(State.money < 4000) return alert("资金不足买题！");
         if(State.ap < 2) return alert("AP不足！");
         State.money -= 4000; State.ap -= 2;
@@ -664,6 +667,7 @@ const Game = {
         State.students.filter(s=>s.sickTimer===0).forEach(s => {
             CONFIG.SUBJECTS.forEach(sub => {
                 let baseGain = (sub.id === 'chi' ? 1.5 : 2.5) * techBonus * this.getGainMultiplier(sub.id, s.mastery[sub.id]) * diffMod;
+                if (s.stress > 80) baseGain *= Math.max(0, 1 - (s.stress - 80) / 100);
                 s.mastery[sub.id] += baseGain;
             });
             s.stress 
@@ -880,7 +884,8 @@ const Game = {
                 let base = s.mastery[sub.id];
                 if(sub.id === 'chi' && base > 120) base = 120 + (base - 120)*0.1; 
                 
-                let sFac = 1 - (s.stress/600);
+                let sFac = 1 - 
+(s.stress/600);
   
                 let raw = base * sFac * drop * sickPen;
                 
@@ -888,6 +893,7 @@ const Game = {
                 let pBad = (1 - base / sub.cap) * 0.4 * (s.sickTimer>0?2:1); 
 
          
+    
                 let rnd = Math.random();
                 if(rnd < pGood) {
                     let evList = EXAM_EVENTS[sub.id].filter(x=>x.v > 0);
@@ -917,7 +923,7 @@ const Game = {
                 let calc = this.getRealRank(rData[i].total);
                 if (rData[i].total >= 720) {
                     rData[i].rank = i + 1;
-                    // >=720就是前几名包揽
+// >=720就是前几名包揽
                 } else {
                     // 保证后续名次必定比前面大（除平局外）
                     rData[i].rank = Math.max(calc, i + 1, (i > 0 ? rData[i-1].rank + 1 : 1));
@@ -940,18 +946,20 @@ const Game = {
                
                         if(colId === 'total') { cell.innerText = row.total; cell.style.color = "var(--danger)"; }
                         else if(colId === 'rank') { cell.innerText = `第${row.rank}名`; cell.style.color = "#8b5cf6"; }
-                        else if(colId === 'ev') cell.innerHTML = row.evTxt || '-';
+                        else if(colId === 'ev') cell.innerHTML = row.evTxt 
+|| '-';
               
                         else {
                             let cap = CONFIG.SUBJECTS.find(x=>x.id===colId).cap;
-                            cell.innerText = row.scores[colId];
+                            cell.innerText 
+= row.scores[colId];
                             
                             cell.style.background = UI.getScoreColor(row.scores[colId], cap);
                             if(row.scores[colId]/cap > 0.65) cell.style.color = 'white';
-                        }
+       
+                         }
                         cell.classList.add('pop');
-                
-                    }, rIdx * 100);
+}, rIdx * 100);
                 });
 
                 if(cIdx === cols.length - 1) {
@@ -959,38 +967,44 @@ const Game = {
                         let rw = 0; let dt = [];
                         
          
-                        rData.forEach(r => {
+    
+                    rData.forEach(r => {
                             let prw = 0;
                             if(r.rank === 1) { prw = 100000; if(!isMock) this.log(`🎉 震惊！${r.name} 荣获全市理科状元！`, "[巨额奖金]"); }
-            
+       
+     
                             else if(r.rank <= 10) prw = 30000;
                             else if(r.rank <= 100) prw = 10000;
-                            else if(r.rank <= 1000) prw = 5000;
+                           
+ else if(r.rank <= 1000) prw = 5000;
           
                             else if(r.rank <= 5000) prw = 3000;
                             else if(r.rank <= 50000) prw = 1000;
-                            
+               
+             
               
                             rw += prw;
                             if(prw>0) dt.push(`${r.name}+${prw}`);
-                            
+              
+              
                            
                             if (!isMock) {
-                                r.ref.history.scores.push(r.total);
+                             
+    r.ref.history.scores.push(r.total);
                                 r.ref.history.ranks.push(r.rank);
                             }
                         });
-                        if (!isMock) {
+if (!isMock) {
                             let baseRw = 2000;
-                            State.money += (rw + baseRw);
+State.money += (rw + baseRw);
                             document.getElementById('exam-rewards-txt').innerText = `🏆 保底补助¥2000。达标奖励¥${rw} (${dt.join(', ') || '无'})`;
                             this.log(`大考结算：共获 ¥${rw+baseRw}`, "[入账]");
-                        }
+}
                         document.getElementById('exam-close-btn').classList.remove('hidden');
-                    }, rData.length * 100 + 500);
+}, rData.length * 100 + 500);
                 }
             }, cIdx * 700);
-        });
+});
     },
 
     startGaokao() {
@@ -998,14 +1012,14 @@ const Game = {
         this.prepareExam("全国统一高考 (重庆卷)");
         document.getElementById('exam-close-btn').innerText = "查看录取去向";
         document.getElementById('exam-close-btn').onclick = () => { State.isGraduated = true; this.showEnding(); };
-    },
+},
 
     showEnding() {
         document.getElementById('exam-modal').classList.add('hidden');
         document.getElementById('ending-modal').classList.remove('hidden');
 
         let totalClassScore = 0;
-        let cengfanHtml = "";
+let cengfanHtml = "";
 
         State.students.forEach(s => {
             let fS = s.history.scores[s.history.scores.length - 1];
@@ -1014,39 +1028,40 @@ const Game = {
             let tier = CONFIG.UNIS.find(u => fS >= u.min) || CONFIG.UNIS[4];
             let uni = tier.list[Math.floor(Math.random()*tier.list.length)];
             cengfanHtml += `<div 
+
             class="cengfan-card">
                 <div style="font-size:1.5em;">📍</div>
                 <div><b>${s.name}</b><br><span style="font-size:0.85em;color:var(--accent);">${uni} (${fS}分)</span></div>
             </div>`;
         });
-        document.getElementById('ending-cengfan').innerHTML = cengfanHtml;
+document.getElementById('ending-cengfan').innerHTML = cengfanHtml;
 
         let avgScore = totalClassScore / State.students.length;
 
         let pTxt = avgScore >= 685 ?
-        `均分 ${Math.round(avgScore)}！全员清北！神级教练，你被直接提拔为校长！` : 
+`均分 ${Math.round(avgScore)}！全员清北！神级教练，你被直接提拔为校长！` : 
                    avgScore >= 650 ?
-        `均分 ${Math.round(avgScore)}！全员C9！神仙班级再续辉煌，你晋升为副校长！` :
+`均分 ${Math.round(avgScore)}！全员C9！神仙班级再续辉煌，你晋升为副校长！` :
                    avgScore >= 600 ?
-        `均分 ${Math.round(avgScore)}！全员985！你获得了市级优秀教师称号，提拔为年级主任。` :
+`均分 ${Math.round(avgScore)}！全员985！你获得了市级优秀教师称号，提拔为年级主任。` :
                    avgScore >= 500 ?
-        `均分 ${Math.round(avgScore)}！全员211！无一人掉队，你稳稳保住了班主任的职位。` : 
+`均分 ${Math.round(avgScore)}！全员211！无一人掉队，你稳稳保住了班主任的职位。` : 
                    `均分 ${Math.round(avgScore)}。未能带领大家全部突破211线，家长频频投诉，你遗憾被下放去教初中。`;
-        document.getElementById('ending-player').innerHTML = `<h3>你的执教评价（按平均分）</h3><p style="font-size:1.1em; color:var(--text); font-weight:bold;">${pTxt}</p>`;
+document.getElementById('ending-player').innerHTML = `<h3>你的执教评价（按平均分）</h3><p style="font-size:1.1em; color:var(--text); font-weight:bold;">${pTxt}</p>`;
     },
 
     returnToClass() {
         document.getElementById('ending-modal').classList.add('hidden');
-        State.ap = 'INF'; State.maxAp = 'INF';
+State.ap = 'INF'; State.maxAp = 'INF';
         document.getElementById('ui-ap').innerText = 'INF';
         document.getElementById('ap-max-txt').innerText = '';
         document.getElementById('btn-next-turn').innerText = '已毕业';
         document.getElementById('btn-next-turn').disabled = true;
-        document.getElementById('title-snack').innerText = '🍢 同学请客吃小吃';
+document.getElementById('title-snack').innerText = '🍢 同学请客吃小吃';
         document.getElementById('cost-snack').innerText = '免费 | AP: 0';
         document.getElementById('title-hotpot').innerText = '🍲 同学请客老火锅';
         document.getElementById('cost-hotpot').innerText = '免费 | AP: 0';
-        document.getElementById('cost-train').innerText = '无法使用';
+document.getElementById('cost-train').innerText = '无法使用';
         
         this.log("同学们已经毕业，班级里空空荡荡，但偶尔他们会回来看你。", "[完结撒花]");
         this.updateUI();
@@ -1054,23 +1069,32 @@ const Game = {
 
     log(msg, eff = "") {
         const area = document.getElementById('log-area');
-        area.innerHTML = `<div class="log-entry">
+area.innerHTML = `<div class="log-entry">
             <span style="color:#94a3b8">[${State.year}届 ${State.month}月W${State.week}]</span> ${msg}
             ${eff ?
-            `<span class="log-eff">${eff}</span>` : ''}
+`<span class="log-eff">${eff}</span>` : ''}
         </div>` + area.innerHTML;
-    },
+},
 
     updateUI() {
+        let limit = State.diff === 'hard' ? 150 : 180;
+        for (let i = 0; i < State.students.length; i++) {
+            if (State.students[i].stress >= limit) {
+                alert(`【重大事故】${State.students[i].name} 压力达到 ${Math.round(State.students[i].stress)}%，承受不住选择了跳楼！\n\n发生严重校园安全事故，你的教师资格证被吊销，游戏强制结束。`);
+                location.reload();
+                return;
+            }
+        }
+
         document.getElementById('ui-time').innerText = `${State.year}年 ${State.month}月 W${State.week}`;
-        document.getElementById('ui-money').innerText = State.money;
+document.getElementById('ui-money').innerText = State.money;
         if(!State.isGraduated) {
             document.getElementById('ui-ap').innerText = State.ap;
-            document.getElementById('ap-max-txt').innerText = `/${State.maxAp}`;
+document.getElementById('ap-max-txt').innerText = `/${State.maxAp}`;
         }
         document.getElementById('ui-weather').innerText = State.weather.i;
         document.getElementById('ui-weather-txt').innerText = State.weather.n;
-        document.getElementById('ui-season').innerText = State.season + "季";
+document.getElementById('ui-season').innerText = State.season + "季";
         
         if(State.month === 5 && State.year === 2026) document.getElementById('sprint-tag').classList.remove('hidden');
         else document.getElementById('sprint-tag').classList.add('hidden');
@@ -1084,7 +1108,7 @@ const Game = {
 const UI = {
     switchTab(id) {
         document.querySelectorAll('.panel-content').forEach(e=>e.classList.remove('active'));
-        document.querySelectorAll('.sidebar .tab-btn').forEach(e=>e.classList.remove('active'));
+document.querySelectorAll('.sidebar .tab-btn').forEach(e=>e.classList.remove('active'));
         document.getElementById(`panel-${id}`).classList.add('active');
         event.target.classList.add('active');
     },
@@ -1092,10 +1116,10 @@ const UI = {
         document.getElementById('view-classroom').classList.add('hidden');
         document.getElementById('view-archive').classList.add('hidden');
         document.getElementById(`view-${id}`).classList.remove('hidden');
-    },
+},
     toggleMenu(id) { let e=document.getElementById(id); e.classList.contains('active')?e.classList.remove('active'):e.classList.add('active'); },
     hideAllMenus() { document.querySelectorAll('.sub-menu').forEach(e=>e.classList.remove('active'));
-    },
+},
     closeModal(id) { document.getElementById(id).classList.add('hidden'); },
     closeExam() { 
         document.getElementById('exam-modal').classList.add('hidden'); 
@@ -1105,40 +1129,40 @@ const UI = {
     
     showChoiceModal(ev) {
         document.getElementById('choice-desc').innerText = ev.t;
-        document.getElementById('choice-btns').innerHTML = `
+document.getElementById('choice-btns').innerHTML = `
             <button class="btn-choice" onclick="UI.handleChoice(1)">${ev.c1.n}</button>
             <button class="btn-choice" onclick="UI.handleChoice(2)">${ev.c2.n}</button>
         `;
-        document.getElementById('choice-modal').classList.remove('hidden');
+document.getElementById('choice-modal').classList.remove('hidden');
     },
     handleChoice(idx) { UI.closeModal('choice-modal'); idx===1?window.currEv.c1.f():window.currEv.c2.f(); Game.updateUI();
-    },
+},
     
     showHotpotModal() {
         if(State.isGraduated) return Game.confirmHotpot();
-        document.getElementById('hotpot-modal').classList.remove('hidden');
+document.getElementById('hotpot-modal').classList.remove('hidden');
     },
 
     showDoctorModal() {
         let sicks = State.students.map((s,i) => ({s, i})).filter(x => x.s.sickTimer > 0);
-        if(sicks.length === 0) return alert("当前没有学生生病！");
+if(sicks.length === 0) return alert("当前没有学生生病！");
         
         document.getElementById('doctor-list').innerHTML = sicks.map(x => `
             <div style="background:#f8fafc; padding:15px; border-radius:6px; border:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
                 <div><b>${x.s.name}</b> <span style="color:var(--danger); font-size:0.8em;">(病假剩余 ${x.s.sickTimer} 周)</span></div>
                 <button style="padding:8px 15px; background:var(--success); color:white;" onclick="Game.healDoctor(${x.i})">立刻治愈 (¥1000)</button>
             </div>`).join('');
-        document.getElementById('doctor-modal').classList.remove('hidden');
+document.getElementById('doctor-modal').classList.remove('hidden');
     },
 
     showWeeklyModal() {
         State.tempAlloc = {chi:0, mat:0, eng:0, phy:0, che:0, bio:0};
-        this.renderWeeklyAlloc();
+this.renderWeeklyAlloc();
         document.getElementById('weekly-modal').classList.remove('hidden');
     },
     renderWeeklyAlloc() {
         let ptsUsed = Object.values(State.tempAlloc).reduce((a,b)=>a+b,0);
-        document.getElementById('weekly-pts').innerText = 3 - ptsUsed;
+document.getElementById('weekly-pts').innerText = 3 - ptsUsed;
         document.getElementById('weekly-alloc').innerHTML = CONFIG.SUBJECTS.map(sub => `
             <div style="background:#f8fafc; padding:10px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; border:1px solid #e2e8f0;">
                 <b>${sub.n}</b>
@@ -1149,27 +1173,27 @@ const UI = {
                     <button style="padding:2px 8px; background:var(--accent); color:white;" onclick="UI.modWeekly('${sub.id}', 1)">+</button>
                 </div>
             </div>`).join('');
-    },
+},
     modWeekly(s, v) {
         let u = Object.values(State.tempAlloc).reduce((a,b)=>a+b,0);
-        if(v>0 && u>=3) return; if(v<0 && State.tempAlloc[s]<=0) return;
+if(v>0 && u>=3) return; if(v<0 && State.tempAlloc[s]<=0) return;
         State.tempAlloc[s] += v; this.renderWeeklyAlloc();
-    },
+},
 
     getScoreColor(val, cap) {
         let r = val / cap;
-        if(r >= 0.95) return '#9333ea'; 
+if(r >= 0.95) return '#9333ea'; 
         if(r >= 0.90) return '#e11d48'; 
         if(r >= 0.80) return '#ea580c'; 
         if(r >= 0.65) return '#16a34a';
-        if(r >= 0.50) return '#3b82f6'; 
+if(r >= 0.50) return '#3b82f6'; 
         return '#e2e8f0'; 
     },
     getRankTag(val, cap) {
         let r = val / cap;
-        let g = CONFIG.GRADES.find(x => r >= x.v/150) || CONFIG.GRADES[9];
+let g = CONFIG.GRADES.find(x => r >= x.v/150) || CONFIG.GRADES[9];
         return g.l;
-    },
+},
 
     renderClassroom() {
         document.getElementById('view-classroom').innerHTML = State.students.map(s => `
@@ -1177,27 +1201,30 @@ const UI = {
                 <div class="stu-header">
                     <span class="stu-name">${s.name} ${s.sickTimer>0?`<span style="font-size:0.5em; background:var(--danger); color:white; padding:2px 6px; border-radius:4px; vertical-align:middle;">病假 ${s.sickTimer}周</span>`:''}</span>
                     <span style="font-size:0.8em; 
+
                     color:#94a3b8;">预估分: ${Math.round(Object.values(s.mastery).reduce((a,b)=>a+b,0))}</span>
                 </div>
                 <div class="tag-pool">
                     ${s.talents.map(t=>`<span class="tag ${t.t==='neg'?'tag-neg':'tag-pos'}" title="${t.d}">${t.n}</span>`).join('')}
                 </div>
-                <div class="sub-grid">
+       
+         <div class="sub-grid">
           
                     ${CONFIG.SUBJECTS.map(sub => {
                         let ratio = s.mastery[sub.id]/sub.cap;
-                        let textClass = ratio < 0.65 ?
+let textClass = ratio < 0.65 ?
                         'dark-text' : '';
-                        return `<div class="sub-box"><span class="sub-label">${sub.n}</span><div class="sub-val ${textClass}" style="background:${this.getScoreColor(s.mastery[sub.id], sub.cap)}">${this.getRankTag(s.mastery[sub.id], sub.cap)}</div></div>`
+return `<div class="sub-box"><span class="sub-label">${sub.n}</span><div class="sub-val ${textClass}" style="background:${this.getScoreColor(s.mastery[sub.id], sub.cap)}">${this.getRankTag(s.mastery[sub.id], sub.cap)}</div></div>`
                     }).join('')}
                 </div>
                 <div style="font-size:0.7em; margin-top:12px; display:flex; justify-content:space-between; font-weight:bold;">
                     <span>心理防线</span> <span style="color:${s.stress>85?'var(--danger)':'#334155'}">${Math.round(s.stress)}%</span>
           
-                </div>
+   
+             </div>
                 <div class="stress-bar"><div class="stress-fill" style="width:${Math.min(100,s.stress)}%; background:${s.stress>85?'var(--danger)':'var(--accent)'}"></div></div>
             </div>`).join('');
-    },
+},
 
     renderFacilities() {
         document.getElementById('fac-container').innerHTML = CONFIG.FACILITIES.map(f => {
@@ -1206,51 +1233,54 @@ const UI = {
                 <div>
                     <h4 style="margin:0; color:var(--primary);">${f.n} <span style="font-size:0.8em; color:var(--accent);">(Lv.${lv})</span></h4>
      
+
                     <p style="margin:5px 0 0 0; font-size:0.75em; color:#64748b;">${f.d}</p>
                 </div>
                 <button style="padding:8px 15px; background:var(--primary); color:white;" ${lv>=2?'disabled':''} onclick="Game.buyFac('${f.id}')">${lv>=2 ? '满级' : '¥'+f.p[lv+1]}</button>
             </div>`;
         }).join('');
-    },
+},
 
     renderArchiveTabs() {
         document.getElementById('arc-tabs').innerHTML = State.students.map((s, i) => `<div class="arc-tab ${i===0?'active':''}" onclick="UI.showArcDetail(${i}, this)">${s.name}</div>`).join('');
-        if(State.students.length > 0) this.showArcDetail(0, document.querySelector('.arc-tab'));
+if(State.students.length > 0) this.showArcDetail(0, document.querySelector('.arc-tab'));
     },
 
     showArcDetail(idx, el) {
         document.querySelectorAll('.arc-tab').forEach(e=>e.classList.remove('active'));
-        if(el) el.classList.add('active');
+if(el) el.classList.add('active');
         let s = State.students[idx];
         
         let html = `<h2 style="margin-top:0; color:var(--primary);">${s.name} 核心档案</h2>`;
-        html += `<h4>📊 总分历程 (满分750)</h4><div class="chart-container">${this.drawBarChart(s.history.scores, 750, 'var(--accent)')}</div>`;
+html += `<h4>📊 总分历程 (满分750)</h4><div class="chart-container">${this.drawBarChart(s.history.scores, 750, 'var(--accent)')}</div>`;
         html += `<h4>📈 排名历程 (市级)</h4><div class="chart-container">${this.drawBarChart(s.history.ranks, 140000, '#8b5cf6', true)}</div>`;
         document.getElementById('arc-detail').innerHTML = html;
-    },
+},
 
     drawBarChart(data, maxVal, color, reverse=false) {
         if(!data || data.length < 1) return '<div style="width:100%; text-align:center; color:#94a3b8;">暂无大考数据</div>';
-        let totalSlots = 10; 
+let totalSlots = 10; 
         let barWidth = 100 / totalSlots - 4;
-        // 调细了柱体
+// 调细了柱体
         let html = `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="width:100%; height:100%; overflow:visible;">`;
-        data.forEach((val, i) => {
+data.forEach((val, i) => {
             let h = reverse ? (1 - val/maxVal)*100 : (val/maxVal)*100;
             h = Math.max(5, Math.min(100, h)); 
             html += `<rect x="${i * (100/totalSlots)}" y="${100 - h}" width="${barWidth}" height="${h}" fill="${color}" rx="1" />
                      <text x="${i * (100/totalSlots) + barWidth/2}" y="${100 - h - 2}" font-size="4" fill="#666" 
+
                      text-anchor="middle">${val}</text>`;
         });
-        html += `</svg>`;
+html += `</svg>`;
         return html;
     }
 };
 Game.buyFac = function(id) {
     let f = CONFIG.FACILITIES.find(x=>x.id===id);
-    let lv = State.fac[id];
+let lv = State.fac[id];
     let cost = f.p[lv+1];
-    if(State.money >= cost) { State.money -= cost; State.fac[id]++; this.updateUI(); this.log(`升级了：${f.n}`, `[资金-${cost}]`); }
+    if(State.money >= cost) { State.money -= cost; State.fac[id]++; this.updateUI(); this.log(`升级了：${f.n}`, `[资金-${cost}]`);
+}
     else alert("班费不足！");
 };
 
